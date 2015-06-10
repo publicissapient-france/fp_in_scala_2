@@ -51,17 +51,17 @@ Mais il n'est pas encore temps de refactorer car n'existe pas de code commun.
 
 ## Exo 1
 
-Codez la méthode fpair sur **List** et **Option** avec la signature suivante:
+Codez la méthode fproduct sur **List** et **Option** avec la signature suivante:
 
 	sealed trait List[+A]{
-	    def fpair[B](f: (A => B)):List[(A,B)]
+	    def fproduct[B](f: (A => B)):List[(A,B)]
 	}
 
 	sealed trait Option[+A]{
-	    def fpair[B](f: (A => B)):Option[(A,B)]
+	    def fproduct[B](f: (A => B)):Option[(A,B)]
 	}
 
-Les types disent tout! **fpair** fait la même chose que **map** mais en sortie, elle associe dans un tuple l'élément de départ (a:A) au résultant de **f**.
+Les types disent tout! **fproduct** fait la même chose que **map** mais en sortie, elle associe dans un tuple l'élément de départ (a:A) au résultant de **f**.
 
 ## Exo 2
 
@@ -73,7 +73,7 @@ Trouver une interface commune à **List** et **Option** qui ressemble:
 
 		def map... (f: (A => B)): ...
 
-		def fpair... (f: (A => B)): ...
+		def fproduct... (f: (A => B)): ...
 	}
 
 Ah oui, il ne doit y avoir aucun warning de compilation, et aucune annotation pour les faire disparaitre!
@@ -103,12 +103,16 @@ Pour pouvoir abstraire du code générique entre List et Option, il faut ce type
 	trait Foncteur[F[_]] {
 	  def map[A, B](fa:F[A])(f: (A => B)): F[B]
 
-	  def fpair[A, B](fa:F[A])(f: (A => B)): F[(A,B)] = ???
+	  def fproduct[A, B](fa:F[A])(f: (A => B)): F[(A,B)] = ???
+
+	  def fpair[A, B](fa: F[A]): F[(A, A)] = map(fa)(a => (a, a))
 	}
 
 L'interface Foncteur n'applique pas la fonction f sur **this** mais sur un autre paramètre *a: F[A]*. F[_] signifie que F est de niveau 2 mais qu'il n'y a pas de contrainte particulière sur le "sous-type" générique, il ne sert à rien de le nommer.
 
-Même si vous n'avez pas encore implémentation de Foncteur, vous pouvez déjà implémenter dans l'interface Foncteur la méthode *fpair* à partir de la méthode abstrait *map*.
+Vous remarquez qu'il existe ainsi déjà une fonction qui se nomme **fpair**. Elle est implémentée donc disponible pour toutes les instances de foncteurs (List, Option ...).
+
+En s'en inspirant, implémentez la méthode **fproduct**.
 
 ## Exo 4
 
@@ -134,39 +138,10 @@ On peut même déporter la méthode d'instance *map* ici, cela donne :
 Ce pattern s'appelle "type class". Cela semble étrange mais il est bien plus flexible qu'un héritage classique.
 En effet, ce pattern permet aussi d'étendre le comportement de classe existante. Par exemple, il est tout à fait possible de créer une instance de foncteur de String. Nous y reviendrons en détail dans une autre session.
 
-Cependant, en Scala, l'utilisation sous cette forme n'est pas très élégante.
-
-	val maListe = Cons(1,Cons(2,Nil))
-	List.foncteur.map(maListe)(_ + 1)
-	// Cons(2,Cons(3,Nil))
-
-	List.foncteur.fpair(maListe)(_ + 1)
-	// Cons((1,2),Cons((2,3),Nil))
-
-Scala possède un outil permettant décrire
-
-	val maListe = Cons(1,Cons(2,Nil))
-	maListe.map(_ + 1)
-	maListe.fpair(_ + 1)
-
-Ce sont les extensions de classes, ou classes implicites.
-
-	sealed trait List[+A] ...
-
-	object List{
-
-		val foncteur = new Foncteur[List]{...}
-
-		implicit class FoncteurOps[A](val list:List[A]){
-		    def map[B](f: A => B): List[B] = foncteur.map(list)(f)
-
-		    def fpair[B](f: A => B): List[(A,B)] = foncteur.fpair(list)(f)
-		  }
-	}
-
 En Haskell, cela est fait nativement par le compilateur :-)
 C'est l'une des évolutions majeures que Scala devrait prendre dans les prochains mois.
 
+Une session sera dédiée au Type Class plus tard.
 
 ## Exo 5
 
@@ -177,8 +152,11 @@ Chaque instance de foncteur doit vérifier deux lois pour être utilisée correc
 Loi1:
 Pour toute instance de foncteur, appliquer la fonction identité (x => x) retourne comme résultat la structure d'entrée
 
-	val data = ???
-	data.map( x => x ) = x
+	def id[T]: (T => T) = c => c
+
+	forAll(listsOf(alphaLowerChar)) { list =>
+	  map(list)(id[Char]) should equal(list)
+	}
 
 Loi2:
 Soit f une fonction de A => B
@@ -187,17 +165,117 @@ Soit h = g o f une fonction de A => C
 
 Pour toute instance de foncteur, appliquer la fonction h au foncteur est équivalent à appliquer g sur le résultat de l'application de f au foncteur.
 
-	val f: (A => B) = ???
-	val g: (B => C) = ???
+	forAll(listsOf(alphaLowerChar)) { list =>
+	  val f: (Char) => Int = (c: Char) => c.toInt
+	  val g: (Int) => String = (i: Int) => i.toString
+	  val h: (Char) => String = g compose f
 
-	val data = ???
-	data.map(h) === data.map(f).map(g)
+	  val h_over_list = map(list)(h)
+	  val f_over_list = map(list)(f)
+	  val g_over_f_over_list = map(f_over_list)(g)
 
+	  h_over_list should equal(g_over_f_over_list)
+	}
 
 Écrire les tests unitaires pour les foncteurs List dans ListFunctorSpec. Vous trouverez le support de Scalacheck qui permet de générer des listes à taille variable.
 
 
 Question bonus:
-Comment écrire un test unitaire générique sur fpair générique? En fait, il est possible de le créer en utilisant soit une instance existante (genre List) ou alors en en créant une anonyme pour le test.
-Mais c'est là la beauté des mathématiques. Si vous instances de Foncteur vérifie les deux lois d'identité et d'associativité, alors fpair est sûre de fonctionner, quelque soit le type de *A*.
+Comment écrire un test unitaire générique sur fproduct générique? En fait, il est possible de le créer en utilisant soit une instance existante (genre List) ou alors en en créant une anonyme pour le test.
+Mais c'est là la beauté des mathématiques. Si vous instances de Foncteur vérifie les deux lois d'identité et d'associativité, alors fproduct est sûre de fonctionner, quelque soit le type de *A*.
 C'est pas beautiful ca?
+
+# Exo 6
+
+**fproduct** n'est pas la seule méthode à venir avec le foncteur. Voici d'autres méthodes qui existe avec la librarie Scalaz pour tout foncteur:
+
+  	def mapply[A, B](a : A)(f : F[A => B]) : F[B]
+	def lift[A, B](f : A => B) : F[A] => F[B]
+
+Ces implémentations sont un peu plus difficile. Mais les signatures sont votre ami.
+Même sans avoir aucune idée de ce qu'elles font, implémenter ces deux méthodes dans la classe foncteur. Vous aller expérimenter le Type Driven Development. C'est le compilateur et les types qui vous guident dans l'implémentation. Si ça compile, c'est que ça marche!
+
+
+NB: papier et crayon sont vos amis. Oubliez les notions classe, de méthode et de variable, pensez TRANSFORMATION depuis une variable d'un type vers un autre.
+
+NB: **lift** est ce qu'on appelle une fonction d'ordre supérieure. C'est simplement une fonction qui retourne une autre fonction.
+Nous vous conseillons fortement de commencer votre ligne d'implémentation par *(fa:F[A]) =>*, le reste devrait venir tout seul avec ce dont vous avez sous la main.
+
+Il y a encore d'autres méthodes utilitaires dans Scalaz sur les foncteurs. Parcourez la classe **scalaz.Functor** si vous souhaitez en savoir plus.
+
+En effectuant des tests unitaires avec l'instance de List, on se rend compte qu'on peut soit appliquer une seule fonction à une liste d'éléments, ou une liste de fonctions à un seul élément. Et si on voulait appliquer une liste de fonctions à une liste d'éléments. Le foncteur seul ne suffit plus.
+
+# Exo 7
+
+Une autre abstraction est l'**Foncteur Applicatif** ou Applicative Functor. C'est une spécialisation du **Foncteur** qui doit répondre à des lois supplémentaires mais offrent en contrepartie plus de méthodes utilitaires.
+
+
+Voici sa signature:
+
+	trait Applicative[F[_]] extends Foncteur[F]{
+
+		def point[A](a: A): F[A]
+
+		def ap[A, B](fa: F[A])(f: F[A => B]): F[B]
+
+		override def map[A, B](fa: F[A])(f: (A => B)): F[B] = ???
+	}
+
+L'instance d'applicative possède deux méthodes abstraites, **point** et **ap**. Il est cependant possible d'écrire l'implémentation de **map** définie par foncteur à partir de ces deux méthodes.
+
+Écrivez l'implémentation de **map** puis l'instance d'Applicative pour List et Option.
+
+# Exo 8
+À ce stade, l'applicative ne fournit rien de plus que le foncteur. Dans l'interface **Applicative**, en s'inspirant de la méthode **ap2**, implémenter les méthodes apply2 et mapply2**.
+
+	def apply2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C]
+
+	def mapply2[A, B, C](a: A, b: B)(f: F[(A, B) => C]): F[C]
+
+
+# Exo 9
+Il ne reste plus qu'à vérifier les lois de l'applicative
+
+Loi 1: identité de la méthode 'point'
+
+Appliquer à une liste la fonction identité 'wrappée' avec **point** donne la même liste.
+
+	def id[T]: (T => T) = c => c
+	
+	forAll(listsOf(alphaLowerChar)) { list =>
+	
+	  ap(list)(point(id[Char])) should equal(list)
+	  
+	}
+	
+	
+Loi 2 : homomorphism de 'point'
+
+Appliquer *ap* avec **point** sur **x** et une fonction **f** est égal à appliquer **point** sur le résultat de **f(x)**. 
+
+	val f: (Char) => Int = c => c.toInt
+    
+    forAll(alphaLowerChar) { aChar =>
+
+      ap(point(aChar))(point(f)) should equal(point(f(aChar)))
+      
+    }
+    
+
+Loi 3 : interchange
+
+Appliquer des fonctions sur **x** est équivalent à appliquer **x** sur chaque fonction.
+
+	val f: (Int) => Int = i => i + 1
+	val g: (Int) => Int = i => i - 1
+
+	val functions: List[(Int) => Int] = List(f, g)
+
+	forAll(choose(Int.MinValue, Int.MaxValue)) { i =>
+	  val functions_on_i = ap(point(i))(functions)
+	  val i_on_functions = ap(functions)(point((f: Int => Int) => f(i)))
+
+	  functions_on_i should equal(i_on_functions)
+	}
+
+    
