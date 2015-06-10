@@ -10,11 +10,11 @@ class ListFunctorSpec extends PropSpec with GeneratorDrivenPropertyChecks with M
   property("identity law of List Functor instance") {
 
     forAll(listsOf(alphaLowerChar)) { list =>
-      fail("prove me, I'm famous")
+      list.map(c => c) should equal(list)
     }
 
     forAll(listsOf(Gen.choose(Int.MinValue, Int.MaxValue))) { list =>
-      fail("prove me, I'm famous")
+      list.map(c => c) should equal(list)
     }
 
   }
@@ -22,11 +22,11 @@ class ListFunctorSpec extends PropSpec with GeneratorDrivenPropertyChecks with M
   property("associativity law of List Functor instance") {
 
     forAll(listsOf(alphaLowerChar)) { list =>
-      val f: (Char) => Int = (c:Char) => c.toInt
-      val g: (Int) => String = (i:Int) => i.toString
+      val f: (Char) => Int = (c: Char) => c.toInt
+      val g: (Int) => String = (i: Int) => i.toString
       val h: (Char) => String = g compose f
 
-      fail("prove me, I'm famous")
+      list.map(h) should equal(list.map(f).map(g))
     }
   }
 }
