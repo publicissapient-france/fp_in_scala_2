@@ -54,11 +54,11 @@ Mais il n'est pas encore temps de refactorer car n'existe pas de code commun.
 Codez la méthode fproduct sur **List** et **Option** avec la signature suivante:
 
 	sealed trait List[+A]{
-	    def fpair[B](f: (A => B)):List[(A,B)]
+	    def fproduct[B](f: (A => B)):List[(A,B)]
 	}
 
 	sealed trait Option[+A]{
-	    def fpair[B](f: (A => B)):Option[(A,B)]
+	    def fproduct[B](f: (A => B)):Option[(A,B)]
 	}
 
 Les types disent tout! **fproduct** fait la même chose que **map** mais en sortie, elle associe dans un tuple l'élément de départ (a:A) au résultant de **f**.
@@ -73,7 +73,7 @@ Trouver une interface commune à **List** et **Option** qui ressemble:
 
 		def map... (f: (A => B)): ...
 
-		def fpair... (f: (A => B)): ...
+		def fproduct... (f: (A => B)): ...
 	}
 
 Ah oui, il ne doit y avoir aucun warning de compilation, et aucune annotation pour les faire disparaitre!
