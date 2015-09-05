@@ -9,17 +9,19 @@ class ListFunctorSpec extends FunSpec with Matchers {
   val _1_2_3_as_string = List("1", "2", "3")
 
   val _1_2_3_as_int = List(1, 2, 3)
+  
+  import List.foncteur._
 
 
   describe("Functor instance for list") {
     it("should map a function over a list") {
-      val result_of_map = List.foncteur.map(_1_2_3_as_string)(Integer.parseInt)
+      val result_of_map = map(_1_2_3_as_string)(Integer.parseInt)
 
       result_of_map shouldBe _1_2_3_as_int
     }
 
     it("should pair the input and output of a function over a list with fproduct") {
-      val result_of_fproduct = List.foncteur.fproduct(_1_2_3_as_string)(Integer.parseInt)
+      val result_of_fproduct = fproduct(_1_2_3_as_string)(Integer.parseInt)
 
       result_of_fproduct shouldBe List(
         ("1", 1),
@@ -29,7 +31,7 @@ class ListFunctorSpec extends FunSpec with Matchers {
     }
 
     it("should be able to apply a list of functions over an element with mapply") {
-      val result_of_mapply = List.foncteur.mapply("heLLo")(List(
+      val result_of_mapply = mapply("heLLo")(List(
         (s: String) => s.toUpperCase,
         (s: String) => s.toLowerCase
       ))

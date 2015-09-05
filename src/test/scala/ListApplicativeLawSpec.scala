@@ -9,16 +9,18 @@ class ListApplicativeSpec extends FunSpec with Matchers {
   val _1_2_3_as_string = List("1", "2", "3")
 
   val _1_2_3_as_int = List(1, 2, 3)
+  
+  import List.applicative._
 
   describe("An applicate instance for list") {
     it("should map a function over a list") {
-      val result_of_map = List.applicative.map(_1_2_3_as_string)(Integer.parseInt)
+      val result_of_map = map(_1_2_3_as_string)(Integer.parseInt)
 
       result_of_map shouldBe _1_2_3_as_int
     }
 
     it("should apply a list of functions on a list of elements") {
-      val result_of_ap = List.applicative.ap(_1_2_3_as_int)(List(
+      val result_of_ap = ap(_1_2_3_as_int)(List(
         (i: Int) => i + 1,
         (i: Int) => i - 1
       ))
@@ -27,7 +29,7 @@ class ListApplicativeSpec extends FunSpec with Matchers {
     }
 
     it("should apply a list of functions over pairs over a pair of list of elements") {
-      val result_of_ap: List[Int] = List.applicative.ap2(_1_2_3_as_int, _1_2_3_as_int)(List(
+      val result_of_ap: List[Int] = ap2(_1_2_3_as_int, _1_2_3_as_int)(List(
         _ + _,
         _ * _
       ))
