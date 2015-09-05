@@ -152,8 +152,11 @@ Chaque instance de foncteur doit vérifier deux lois pour être utilisée correc
 Loi1:
 Pour toute instance de foncteur, appliquer la fonction identité (x => x) retourne comme résultat la structure d'entrée
 
-	val data = ???
-	data.map( x => x ) should (equal x)
+	def id[T]: (T => T) = c => c
+
+	forAll(listsOf(alphaLowerChar)) { list =>
+	  map(list)(id[Char]) should equal(list)
+	}
 
 Loi2:
 Soit f une fonction de A => B
@@ -162,12 +165,17 @@ Soit h = g o f une fonction de A => C
 
 Pour toute instance de foncteur, appliquer la fonction h au foncteur est équivalent à appliquer g sur le résultat de l'application de f au foncteur.
 
-	val f: (A => B) = ???
-	val g: (B => C) = ???
+	forAll(listsOf(alphaLowerChar)) { list =>
+	  val f: (Char) => Int = (c: Char) => c.toInt
+	  val g: (Int) => String = (i: Int) => i.toString
+	  val h: (Char) => String = g compose f
 
-	val data = ???
-	data.map(h) should equal (data.map(f).map(g))
+	  val h_over_list = map(list)(h)
+	  val f_over_list = map(list)(f)
+	  val g_over_f_over_list = map(f_over_list)(g)
 
+	  h_over_list should equal(g_over_f_over_list)
+	}
 
 Écrire les tests unitaires pour les foncteurs List dans ListFunctorSpec. Vous trouverez le support de Scalacheck qui permet de générer des listes à taille variable.
 
