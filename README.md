@@ -104,13 +104,13 @@ Pour pouvoir abstraire du code générique entre List et Option, il faut ce type
 	  def map[A, B](fa:F[A])(f: (A => B)): F[B]
 
 	  def fproduct[A, B](fa:F[A])(f: (A => B)): F[(A,B)] = ???
-	  
+
 	  def fpair[A, B](fa: F[A]): F[(A, A)] = map(fa)(a => (a, a))
 	}
 
 L'interface Foncteur n'applique pas la fonction f sur **this** mais sur un autre paramètre *a: F[A]*. F[_] signifie que F est de niveau 2 mais qu'il n'y a pas de contrainte particulière sur le "sous-type" générique, il ne sert à rien de le nommer.
 
-Vous remarquez qu'il existe ainsi déjà une fonction qui se nomme **fpair**. Elle est implémentée donc disponible pour toutes les instances de foncteurs (List, Option ...). 
+Vous remarquez qu'il existe ainsi déjà une fonction qui se nomme **fpair**. Elle est implémentée donc disponible pour toutes les instances de foncteurs (List, Option ...).
 
 En s'en inspirant, implémentez la méthode **fproduct**.
 
@@ -153,7 +153,7 @@ Loi1:
 Pour toute instance de foncteur, appliquer la fonction identité (x => x) retourne comme résultat la structure d'entrée
 
 	val data = ???
-	data.map( x => x ) = x
+	data.map( x => x ) should (equal x)
 
 Loi2:
 Soit f une fonction de A => B
@@ -166,7 +166,7 @@ Pour toute instance de foncteur, appliquer la fonction h au foncteur est équiva
 	val g: (B => C) = ???
 
 	val data = ???
-	data.map(h) === data.map(f).map(g)
+	data.map(h) should equal (data.map(f).map(g))
 
 
 Écrire les tests unitaires pour les foncteurs List dans ListFunctorSpec. Vous trouverez le support de Scalacheck qui permet de générer des listes à taille variable.
@@ -183,50 +183,91 @@ C'est pas beautiful ca?
 
   	def mapply[A, B](a : A)(f : F[A => B]) : F[B]
 	def lift[A, B](f : A => B) : F[A] => F[B]
-	
+
 Ces implémentations sont un peu plus difficile. Mais les signatures sont votre ami.
 Même sans avoir aucune idée de ce qu'elles font, implémenter ces deux méthodes dans la classe foncteur. Vous aller expérimenter le Type Driven Development. C'est le compilateur et les types qui vous guident dans l'implémentation. Si ça compile, c'est que ça marche!
- 
+
 
 NB: papier et crayon sont vos amis. Oubliez les notions classe, de méthode et de variable, pensez TRANSFORMATION depuis une variable d'un type vers un autre.
 
-NB: **lift** est ce qu'on appelle une fonction d'ordre supérieure. C'est simplement une fonction qui retourne une autre fonction. 
+NB: **lift** est ce qu'on appelle une fonction d'ordre supérieure. C'est simplement une fonction qui retourne une autre fonction.
 Nous vous conseillons fortement de commencer votre ligne d'implémentation par *(fa:F[A]) =>*, le reste devrait venir tout seul avec ce dont vous avez sous la main.
 
 Il y a encore d'autres méthodes utilitaires dans Scalaz sur les foncteurs. Parcourez la classe **scalaz.Functor** si vous souhaitez en savoir plus.
 
 En effectuant des tests unitaires avec l'instance de List, on se rend compte qu'on peut soit appliquer une seule fonction à une liste d'éléments, ou une liste de fonctions à un seul élément. Et si on voulait appliquer une liste de fonctions à une liste d'éléments. Le foncteur seul ne suffit plus.
- 
+
 # Exo 7
 
 Une autre abstraction est l'**Foncteur Applicatif** ou Applicative Functor. C'est une spécialisation du **Foncteur** qui doit répondre à des lois supplémentaires mais offrent en contrepartie plus de méthodes utilitaires.
 
- 
+
 Voici sa signature:
- 
+
 	trait Applicative[F[_]] extends Foncteur[F]{
-        
+
 		def point[A](a: A): F[A]
-    
+
 		def ap[A, B](fa: F[A])(f: F[A => B]): F[B]
-		
+
 		override def map[A, B](fa: F[A])(f: (A => B)): F[B] = ???
 	}
 
 L'instance d'applicative possède deux méthodes abstraites, **point** et **ap**. Il est cependant possible d'écrire l'implémentation de **map** définie par foncteur à partir de ces deux méthodes.
-	
+
 Écrivez l'implémentation de **map** puis l'instance d'Applicative pour List et Option.
 
 # Exo 8
-À ce stade, l'applicative ne fournit rien de plus que le foncteur. Dans l'interface **Applicative**, implémenter la méthode.
+À ce stade, l'applicative ne fournit rien de plus que le foncteur. Dans l'interface **Applicative**, en s'inspirant de la méthode **ap2**, implémenter les méthodes apply2 et mapply2**.
 
-	def ap2[A, B, C](fa: F[A], fb: F[B])(f: F[(A, B) => C]): F[C]
-	
-Vous devez fortement utiliser la méthode **ap**. Attention, c'est hard!
-	
-Utilisez ensuite cette définition pour implémenter les méthodes suivantes:
-	
 	def apply2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C]
-	
+
 	def mapply2[A, B, C](a: A, b: B)(f: F[(A, B) => C]): F[C]
+
+
+# Exo 9
+Il ne reste plus qu'à vérifier les lois de l'applicative
+
+Loi 1: identité de la méthode 'point'
+
+Appliquer à une liste la fonction identité 'wrappée' avec **point** donne la même liste.
+
+	def id[T]: (T => T) = c => c
 	
+	forAll(listsOf(alphaLowerChar)) { list =>
+	
+	  ap(list)(point(id[Char])) should equal(list)
+	  
+	}
+	
+	
+Loi 2 : homomorphism de 'point'
+
+Appliquer *ap* avec **point** sur **x** et une fonction **f** est égal à appliquer **point** sur le résultat de **f(x)**. 
+
+	val f: (Char) => Int = c => c.toInt
+    
+    forAll(alphaLowerChar) { aChar =>
+
+      ap(point(aChar))(point(f)) should equal(point(f(aChar)))
+      
+    }
+    
+
+Loi 3 : interchange
+
+Appliquer des fonctions sur **x** est équivalent à appliquer **x** sur chaque fonction.
+
+	val f: (Int) => Int = i => i + 1
+	val g: (Int) => Int = i => i - 1
+
+	val functions: List[(Int) => Int] = List(f, g)
+
+	forAll(choose(Int.MinValue, Int.MaxValue)) { i =>
+	  val functions_on_i = ap(point(i))(functions)
+	  val i_on_functions = ap(functions)(point((f: Int => Int) => f(i)))
+
+	  functions_on_i should equal(i_on_functions)
+	}
+
+    

@@ -27,6 +27,8 @@ case class Cons[A](a: A, t: List[A]) extends List[A]
 
 object List {
 
+  def apply[A](elts: A*): List[A] = if (elts.isEmpty) Nil else Cons(elts.head, List.apply(elts.tail: _*))
+
   val foncteur = new Foncteur[List] {
     def map[A, B](fa: List[A])(f: (A => B)): List[B] = fa match {
       case Nil => Nil

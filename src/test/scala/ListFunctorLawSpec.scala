@@ -6,19 +6,10 @@ import org.scalatest.{FunSpec, Matchers, PropSpec}
 
 class ListFunctorSpec extends FunSpec with Matchers {
 
-  val _1_2_3_as_string = Cons(
-    "1", Cons(
-      "2", Cons(
-        "3", Nil)
-    )
-  )
+  val _1_2_3_as_string = List("1", "2", "3")
 
-  val _1_2_3_as_int = Cons(
-    1, Cons(
-      2, Cons(
-        3, Nil)
-    )
-  )
+  val _1_2_3_as_int = List(1, 2, 3)
+
 
   describe("Functor instance for list") {
     it("should map a function over a list") {
@@ -30,23 +21,22 @@ class ListFunctorSpec extends FunSpec with Matchers {
     it("should pair the input and output of a function over a list with fproduct") {
       val result_of_fproduct = List.foncteur.fproduct(_1_2_3_as_string)(Integer.parseInt)
 
-      result_of_fproduct shouldBe Cons(
-        ("1", 1), Cons(
-          ("2", 2), Cons(
-            ("3", 3), Nil)
-        )
+      result_of_fproduct shouldBe List(
+        ("1", 1),
+        ("2", 2),
+        ("3", 3)
       )
     }
 
     it("should be able to apply a list of functions over an element with mapply") {
-      val result_of_mapply = List.foncteur.mapply("heLLo")(Cons(
-        (s: String) => s.toUpperCase, Cons(
-          (s: String) => s.toLowerCase, Nil)
+      val result_of_mapply = List.foncteur.mapply("heLLo")(List(
+        (s: String) => s.toUpperCase,
+        (s: String) => s.toLowerCase
       ))
 
-      result_of_mapply shouldBe Cons(
-        "HELLO", Cons(
-          "hello", Nil)
+      result_of_mapply shouldBe List(
+        "HELLO",
+        "hello"
       )
     }
   }
@@ -56,14 +46,14 @@ class ListFunctorLawSpec extends PropSpec with GeneratorDrivenPropertyChecks wit
 
   import ListFunctorLawSpec._
 
+  import List.foncteur._
+
   property("identity law of List Functor instance") {
 
-    forAll(listsOf(alphaLowerChar)) { list =>
-      List.foncteur.map(list)(c => c) should equal(list)
-    }
+    def id[T]: (T => T) = c => c
 
-    forAll(listsOf(Gen.choose(Int.MinValue, Int.MaxValue))) { list =>
-      List.foncteur.map(list)(c => c) should equal(list)
+    forAll(listsOf(alphaLowerChar)) { list =>
+      map(list)(id[Char]) should equal(list)
     }
 
   }
@@ -75,7 +65,11 @@ class ListFunctorLawSpec extends PropSpec with GeneratorDrivenPropertyChecks wit
       val g: (Int) => String = (i: Int) => i.toString
       val h: (Char) => String = g compose f
 
-      List.foncteur.map(list)(h) should equal(List.foncteur.map(List.foncteur.map(list)(f))(g))
+      val h_over_list = map(list)(h)
+      val f_over_list = map(list)(f)
+      val g_over_f_over_list = map(f_over_list)(g)
+
+      h_over_list should equal(g_over_f_over_list)
     }
   }
 }
