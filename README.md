@@ -207,7 +207,7 @@ En effectuant des tests unitaires avec l'instance de List, on se rend compte qu'
 
 # Exo 7
 
-Une autre abstraction est l'**Foncteur Applicatif** ou Applicative Functor. C'est une spécialisation du **Foncteur** qui doit répondre à des lois supplémentaires mais offrent en contrepartie plus de méthodes utilitaires.
+Une autre abstraction est l' **Foncteur Applicatif** ou Applicative Functor. C'est une spécialisation du **Foncteur** qui doit répondre à des lois supplémentaires mais offrent en contrepartie plus de méthodes utilitaires.
 
 
 Voici sa signature:
@@ -226,11 +226,20 @@ L'instance d'applicative possède deux méthodes abstraites, **point** et **ap**
 Écrivez l'implémentation de **map** puis l'instance d'Applicative pour List et Option.
 
 # Exo 8
-À ce stade, l'applicative ne fournit rien de plus que le foncteur. Dans l'interface **Applicative**, en s'inspirant de la méthode **ap2**, implémenter les méthodes apply2 et mapply2**.
+À ce stade, l'applicative ne fournit rien de plus que le foncteur. Dans l'interface **Applicative**, en s'inspirant de la méthode **ap2**, implémenter les méthodes **apply2** et **mapply2**.
 
-	def apply2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C]
 
-	def mapply2[A, B, C](a: A, b: B)(f: F[(A, B) => C]): F[C]
+	def ap2[A, B, C](fa: F[A], fb: F[B])(f: F[(A, B) => C]): F[C] = {
+		val curriedF: F[A => B => C] = map(f)(_.curried)
+
+		val fAppliedOnFA: F[(B) => C] = ap(fa)(curriedF)
+
+		ap(fb)(fAppliedOnFA)
+	}
+
+	def apply2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] = ???
+
+	def mapply2[A, B, C](a: A, b: B)(f: F[(A, B) => C]): F[C] = ???
 
 
 # Exo 9
